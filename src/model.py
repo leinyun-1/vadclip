@@ -138,8 +138,8 @@ class CLIPVAD(nn.Module):
         soft = nn.Softmax(1)
         x2 = x.matmul(x.permute(0, 2, 1)) # B*T*T
         x_norm = torch.norm(x, p=2, dim=2, keepdim=True)  # B*T*1
-        x_norm_x = x_norm.matmul(x_norm.permute(0, 2, 1))
-        x2 = x2/(x_norm_x+1e-20)
+        x_norm_x = x_norm.matmul(x_norm.permute(0, 2, 1)) 
+        x2 = x2/(x_norm_x+1e-20) 
         output = torch.zeros_like(x2)
         if seq_len is None:
             for i in range(x.shape[0]):
@@ -200,10 +200,12 @@ class CLIPVAD(nn.Module):
         return text_features
 
     def forward(self, visual, padding_mask, text, lengths):
-        visual_features = self.encode_video(visual, padding_mask, lengths)
-        logits1 = self.classifier(visual_features + self.mlp2(visual_features))
+        visual_features = self.encode_video(visual, padding_mask, lengths) # b*n*c
+        logits1 = self.classifier(visual_features + self.mlp2(visual_features)) # b*n*1
 
-        text_features_ori = self.encode_textprompt(text)
+        text_features_ori = self.encode_textprompt(text)  # b*m*c
+        self.query(visual_feats= visual,text_feats= text_features_ori) 
+        exit()
 
         text_features = text_features_ori
         logits_attn = logits1.permute(0, 2, 1)
@@ -218,7 +220,16 @@ class CLIPVAD(nn.Module):
         visual_features_norm = visual_features / visual_features.norm(dim=-1, keepdim=True)
         text_features_norm = text_features / text_features.norm(dim=-1, keepdim=True)
         text_features_norm = text_features_norm.permute(0, 2, 1)
-        logits2 = visual_features_norm @ text_features_norm.type(visual_features_norm.dtype) / 0.07
+        logits2 = visual_features_norm @ text_features_norm.type(visual_features_norm.dtype) / 0.07   # b*n*m
 
         return text_features_ori, logits1, logits2
     
+    def query(self,visual_feats,text_feats):
+        visual_feats = visual_feats / visual_feats.norm(dim=-1,keepdim=True) # b*n*c
+        text_feats = text_feats / text_feats.norm(dim=-1,keepdim=True) # m*c
+        text_feats = text_feats.permute(1,0).unsqueeze(0) # b*c*m
+
+        score = visual_feats @ text_feats.type(visual_feats.dtype) # b*n*m
+        score = score.squeeze(0).detach().cpu().numpy()
+        score = score > 0.1
+        np.savetxt('data.csv', score, delimiter=',', fmt='%.6f', header= 'Normal, Abuse, Arrest, Arson, Assault, Burglary, Explosion, Fighting, RoadAccidents, Robbery, Shooting, Shoplifting, Stealing, Vandalism', comments='')

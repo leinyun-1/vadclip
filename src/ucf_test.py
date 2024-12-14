@@ -20,7 +20,7 @@ def test(model, testdataloader, maxlen, prompt_text, gt, gtsegments, gtlabels, d
 
     with torch.no_grad():
         for i, item in enumerate(testdataloader):
-            visual = item[0].squeeze(0)
+            visual = item[0].squeeze(0) 
             length = item[2]
 
             length = int(length)
@@ -67,7 +67,7 @@ def test(model, testdataloader, maxlen, prompt_text, gt, gtsegments, gtlabels, d
     ap1 = ap1.tolist()
     ap2 = ap2.tolist()
 
-    ROC1 = roc_auc_score(gt, np.repeat(ap1, 16))
+    ROC1 = roc_auc_score(gt, np.repeat(ap1, 16))  # 16是帧下采样的倍数，是巧合吗
     AP1 = average_precision_score(gt, np.repeat(ap1, 16))
     ROC2 = roc_auc_score(gt, np.repeat(ap2, 16))
     AP2 = average_precision_score(gt, np.repeat(ap2, 16))
